@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mon appart">
+<title>Checklist appartement — Langgasse</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f7f2ec; --card:#fffdfa; --ink:#2d2622; --muted:#8a7d74; --line:#ebe2d8;
+    --accent:#b6765a; --accent-soft:#f1e1d6; --done:#9aa88f; --urgent:#c2523c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;font-size:15px;line-height:1.45}
+  .wrap{max-width:640px;margin:0 auto;padding:28px 16px 60px}
+  header h1{font-family:Fraunces,serif;font-weight:600;font-size:30px;margin:0 0 4px;letter-spacing:-.01em}
+  header p{margin:0;color:var(--muted);font-size:14px}
+  .progress{margin:18px 0 22px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+  .progress .row{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:8px}
+  .progress .row b{color:var(--ink);font-weight:600}
+  .bar{height:8px;background:var(--accent-soft);border-radius:99px;overflow:hidden}
+  .bar i{display:block;height:100%;width:0;background:var(--accent);border-radius:99px;transition:width .3s}
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+  .toolbar button{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:7px 12px;border-radius:99px;cursor:pointer}
+  .toolbar button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .syncbox{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:14px}
+  .syncbox p{margin:0 0 8px;font-size:13px;color:var(--muted)}
+  .syncbox textarea{width:100%;font:12px ui-monospace,monospace;border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:8px;background:#fff;color:var(--ink)}
+  .syncbox .msg{margin:4px 0 0;color:var(--accent);font-weight:500}
+  section{background:var(--card);border:1px solid var(--line);border-radius:16px;margin-bottom:14px;overflow:hidden}
+  section.urgent{border-color:#e9c3b8}
+  .sh{display:flex;align-items:center;gap:10px;padding:14px 16px;cursor:pointer;user-select:none}
+  .sh .em{font-size:20px}
+  .sh h2{flex:1;margin:0;font-family:Fraunces,serif;font-weight:500;font-size:18px}
+  .sh .n{font-size:12px;color:var(--muted);background:var(--bg);padding:3px 9px;border-radius:99px}
+  .sh .chev{color:var(--muted);transition:transform .2s}
+  section.closed .chev{transform:rotate(-90deg)}
+  section.closed .body{display:none}
+  .body{padding:0 8px 8px}
+  .note{margin:0 8px 8px;padding:9px 12px;background:var(--accent-soft);border-radius:10px;font-size:13px;color:#6e4a3a}
+  .sub{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;margin:14px 10px 4px}
+  label{display:flex;align-items:flex-start;gap:12px;padding:9px 10px;border-radius:10px;cursor:pointer}
+  label:hover{background:#faf5ef}
+  input[type=checkbox]{appearance:none;-webkit-appearance:none;flex:none;width:20px;height:20px;margin:1px 0 0;border:1.5px solid #cbbcae;border-radius:6px;background:#fff;display:grid;place-content:center;cursor:pointer}
+  input[type=checkbox]:checked{background:var(--done);border-color:var(--done)}
+  input[type=checkbox]:checked::after{content:"";width:10px;height:6px;border:2px solid #fff;border-top:0;border-right:0;transform:rotate(-45deg) translate(1px,-1px)}
+  .t{flex:1}
+  .t .tr{color:var(--muted);font-size:13px}
+  .t small{display:block;color:var(--muted);font-size:12.5px;margin-top:1px}
+  .tag{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:99px;margin-left:6px;vertical-align:1px}
+  .tag.u{background:#f6ddd6;color:var(--urgent)}
+  .tag.d{background:#e9ecdf;color:#5d6b52}
+  .tag.i{background:#e3ebf3;color:#3f6185}
+  .tag.s{background:#f3ecd9;color:#7d6630}
+  label.checked .t{color:var(--muted);text-decoration:line-through;text-decoration-color:#cbbcae}
+  body.hide-done label.checked{display:none}
+  footer{text-align:center;color:var(--muted);font-size:12px;margin-top:24px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Mon appart ✨</h1>
+    <p>St-Gallen — tout ce qu'il reste à acheter et à faire</p>
+  </header>
+
+  <div class="progress">
+    <div class="row"><span>Progression</span><span><b id="cnt">0</b> / <span id="tot">0</span></span></div>
+    <div class="bar"><i id="fill"></i></div>
+  </div>
+
+  <div class="toolbar">
+    <button id="hide">Masquer ce qui est fait</button>
+    <button id="fold">Tout replier</button>
+    <button id="sync">Sauvegarde</button>
+  </div>
+  <div id="syncbox" class="syncbox" hidden>
+    <p>Copie ce code pour garder ta progression, ou colle un code pour la récupérer.</p>
+    <textarea id="code" rows="3" placeholder="Colle ton code ici…"></textarea>
+    <div class="toolbar">
+      <button id="exp">Copier ma progression</button>
+      <button id="imp">Importer le code</button>
+    </div>
+    <p id="msg" class="msg"></p>
+  </div>
+
+  <div id="list"></div>
+  <footer>Tes coches restent enregistrées sur cet appareil.</footer>
+</div>
+
+<script>
+/* Chaque article : [id, français, anglais, allemand, précision, déjà fait, type de tag, texte du tag]
+   Types de tag : u = urgent, d = fait, i = IKEA, s = supermarché */
+const DATA = [
+  {id:"fait", em:"✅", title:"Déjà fait", items:[
+    ["wifi","Abonnement wifi","Wi-Fi subscription","WLAN-Abo","S'active le jeudi 27 novembre",true,"d","Fait"],
+    ["bureau","Bureau commandé","Desk ordered","Schreibtisch bestellt","",true,"d","Fait"],
+  ]},
+  {id:"lundi", em:"📞", title:"IKEA & à ramener de Genève", urgent:true, items:[
+    ["ikea-montage","Appeler IKEA pour le montage du bureau","Call IKEA for desk assembly","IKEA wegen Schreibtischmontage anrufen",""],
+    ["ikea-pax","Demander un lien pour le PAX avec montage","Ask for a PAX link with assembly service","Link für PAX mit Montageservice anfragen",""],
+    {sub:"À ramener de Genève"},
+    ["toaster","Toasteur","Toaster","Toaster",""],
+    ["couette","Couette","Duvet","Bettdecke",""],
+    ["serviettes","Deux serviettes","Two towels","Zwei Handtücher",""],
+  ]},
+  {id:"urgent", em:"🔧", title:"Urgent — rideaux & bricolage", urgent:true, items:[
+    ["glisseurs","Glisseurs pour rideaux","Curtain gliders","Vorhanggleiter","Vérifie le type de rail avant d'acheter",false,"u","Urgent"],
+    ["perfo","Perforateur pour béton","Hammer drill","Bohrhammer","+ forets béton et chevilles",false,"u","Urgent"],
+    ["tournevis","Tournevis","Screwdriver","Schraubenzieher",""],
+  ]},
+  {id:"cuisine", em:"🍳", title:"Cuisine — équipement", items:[
+    {sub:"Cuisson & préparation"},
+    ["casserole","Casserole","Saucepan","Kochtopf",""],
+    ["poele","Poêle","Frying pan","Bratpfanne",""],
+    ["couteau-grand","Grand couteau","Large knife","Grosses Messer","",false,"i","IKEA"],
+    ["couteau-petit","Petit couteau","Small knife","Kleines Messer","",false,"i","IKEA"],
+    ["planche","Planche à découper","Cutting board","Schneidebrett","",false,"i","IKEA"],
+    ["rouleau","Rouleau à pâtisserie","Rolling pin","Wallholz","",false,"i","IKEA"],
+    ["gant","Gant de cuisine","Oven mitt","Ofenhandschuh","",false,"i","IKEA"],
+    ["grand-bol","Grands bols ×1–2","Large bowls","Grosse Schüsseln","Dont un pour mixer",false,"i","IKEA"],
+    ["balance","Balance de cuisine","Kitchen scale","Küchenwaage","",false,"u","Important"],
+    {sub:"Vaisselle"},
+    ["assiettes","Assiettes","Plates","Teller",""],
+    ["bols","Bols ×4","Bowls","Schalen","",false,"i","IKEA"],
+    ["couverts","Couverts","Cutlery","Besteck",""],
+    ["verres","Verres","Glasses","Gläser",""],
+    ["verres-vin","Verres à vin ×4–6","Wine glasses","Weingläser","",false,"i","IKEA"],
+    ["sousplats","Sous-plats","Trivets","Untersetzer","",false,"i","IKEA"],
+    ["cure-dents","Cure-dents","Toothpicks","Zahnstocher","",false,"s","Supermarché"],
+    {sub:"Appareils"},
+    ["sodastream","SodaStream","SodaStream","SodaStream",""],
+  ]},
+  {id:"maison", em:"🧺", title:"Maison, salle de bain & entretien", items:[
+    {sub:"Linge & confort"},
+    ["housse","Protège-matelas","Mattress protector","Matratzenschoner","Pour ton lit 160×200"],
+    ["plaid","Plaid","Throw blanket","Kuscheldecke","Le joli plaid vu chez Manor"],
+    ["fer","Fer ou planche à repasser","Iron or ironing board","Bügeleisen oder Bügelbrett","",false,"i","IKEA"],
+    {sub:"Entretien"},
+    ["sopalin","Sopalin (un stock)","Paper towels","Haushaltspapier","",false,"s","Supermarché"],
+    ["lessive","Lessive","Laundry detergent","Waschmittel","",false,"s","Supermarché"],
+    {sub:"Salle de bain"},
+    ["savon","Savon pour les mains","Hand soap","Handseife","",false,"s","Supermarché"],
+    ["bain-bouche","Bain de bouche","Mouthwash","Mundspülung","",false,"s","Supermarché"],
+    ["lentilles","Produit pour lentilles","Contact lens solution","Kontaktlinsenlösung","",false,"s","Supermarché"],
+  ]},
+  {id:"courses", em:"🛒", title:"Courses — nourriture", note:"Prendre au maximum les versions light et riches en protéines.", items:[
+    {sub:"Protéines"},
+    ["oeufs","Œufs","Eggs","Eier",""],
+    ["poulet","Poulet","Chicken","Poulet",""],
+    ["blanc-poulet","Blanc de poulet","Chicken breast","Pouletbrust",""],
+    ["hache","Viande hachée","Minced meat","Hackfleisch","Version maigre (5 % MG)"],
+    ["viande","Viande","Meat","Fleisch",""],
+    ["lardons","Lardons","Bacon bits","Speckwürfeli","Version allégée"],
+    ["salami","Salami","Salami","Salami","Version allégée si dispo"],
+    {sub:"Produits laitiers"},
+    ["lait","Lait (plusieurs briques)","Milk","Milch","Écrémé ou protéiné"],
+    ["parmesan","Parmesan","Parmesan","Parmesan",""],
+    ["beurre","Beurre","Butter","Butter",""],
+    ["creme","Crème","Cream","Rahm","Crème légère"],
+    {sub:"Féculents & pain"},
+    ["spaghetti","Spaghettis","Spaghetti","Spaghetti",""],
+    ["riz","Riz","Rice","Reis",""],
+    ["nouilles","Nouilles","Noodles","Nudeln",""],
+    ["toast","Pain toast","Toast bread","Toastbrot",""],
+    ["avoine","Flocons d'avoine","Oats","Haferflocken",""],
+    ["patates","Patates","Potatoes","Kartoffeln",""],
+    ["frites","Frites","Fries","Pommes frites","Version au four"],
+    {sub:"Fruits & légumes"},
+    ["avocat","Avocats","Avocados","Avocados",""],
+    ["bananes","Bananes","Bananas","Bananen",""],
+    ["fraises","Fraises","Strawberries","Erdbeeren",""],
+    ["myrtilles","Myrtilles","Blueberries","Heidelbeeren",""],
+    ["framboises","Framboises","Raspberries","Himbeeren",""],
+    ["tomates","Tomates","Tomatoes","Tomaten",""],
+    ["menthe","Menthe","Mint","Minze",""],
+    ["brocoli","Brocoli","Broccoli","Broccoli",""],
+    ["champignons","Champignons","Mushrooms","Champignons",""],
+    {sub:"Épicerie"},
+    ["sauce-tomate","Sauce tomate","Tomato sauce","Tomatensauce",""],
+    ["sauce-soja","Sauce soja","Soy sauce","Sojasauce",""],
+    ["mayo","Mayonnaise","Mayonnaise","Mayonnaise","Version light"],
+    ["miel","Miel","Honey","Honig",""],
+    ["pb","Beurre de cacahuète","Peanut butter","Erdnussbutter","Sans sucre ajouté"],
+    ["sucre","Sucre","Sugar","Zucker",""],
+    ["gouters","Goûters sains","Healthy snacks","Gesunde Snacks","Ex. barres protéinées, skyr"],
+    {sub:"Boissons"},
+    ["limonade","Limonade","Lemonade","Limonade","Version zéro"],
+    ["jus","Jus d'orange","Orange juice","Orangensaft",""],
+  ]},
+  {id:"commander", em:"📦", title:"À commander", items:[
+    ["table-basse","Table basse","Coffee table","Couchtisch",""],
+    ["shein","Panier SHEIN de Noël","SHEIN Christmas order","SHEIN-Weihnachtsbestellung","≈ 200 CHF"],
+    ["commode","Commode d'entrée","Entryway dresser","Kommode für den Eingang","Pour poser les deux lampes"],
+  ]},
+  {id:"deco", em:"🖼️", title:"Déco & lumières", items:[
+    {sub:"Miroirs"},
+    ["miroir-salon","Miroir du salon","Living room mirror","Spiegel fürs Wohnzimmer",""],
+    ["miroir-chambre","Miroir de la chambre","Bedroom mirror","Spiegel fürs Schlafzimmer",""],
+    {sub:"Tableaux"},
+    ["tab-salon","Grand tableau du salon","Large living room painting","Grosses Bild fürs Wohnzimmer","Salon + chambre ≈ 500 CHF au total"],
+    ["tab-chambre","Grand tableau de la chambre","Large bedroom painting","Grosses Bild fürs Schlafzimmer",""],
+    ["petits-tab","Petits tableaux","Small pictures","Kleine Bilder",""],
+    ["mini-tab","Deux mini-cadres avec une impression","Two mini framed prints","Zwei Mini-Bilderrahmen mit Druck",""],
+    {sub:"Luminaires"},
+    ["lampes-commode","Deux lampes longues et fines","Two tall slim lamps","Zwei hohe, schmale Lampen","Pour la commode d'entrée"],
+    ["chevet","Lampe de chevet","Bedside lamp","Nachttischlampe",""],
+    ["lampe-bureau","Lampe de bureau","Desk lamp","Schreibtischlampe",""],
+    {sub:"Noël"},
+    ["sapin","Sapin de Noël","Christmas tree","Weihnachtsbaum",""],
+  ]},
+  {id:"plus-tard", em:"⏳", title:"Plus tard", items:[
+    ["aspi","Aspirateur & produits ménagers","Vacuum & cleaning products","Staubsauger & Putzmittel",""],
+    ["airfryer","Air fryer","Air fryer","Heissluftfritteuse","Trop gros à porter — à faire livrer"],
+    ["tv","Télé","TV","Fernseher","Éventuellement"],
+    ["meuble-tv","Meuble TV","TV stand","TV-Möbel","Éventuellement"],
+  ]},
+];
+
+const KEY="pauline-checklist-v1";
+let state={}, ui={};
+try{ state=JSON.parse(localStorage.getItem(KEY)||"{}"); ui=JSON.parse(localStorage.getItem(KEY+"-ui")||"{}"); }catch(e){}
+function save(){ try{ localStorage.setItem(KEY,JSON.stringify(state)); localStorage.setItem(KEY+"-ui",JSON.stringify(ui)); }catch(e){} }
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+const list=document.getElementById("list");
+DATA.forEach(sec=>{
+  sec.items.forEach(it=>{ if(Array.isArray(it) && it[5] && !(it[0] in state)) state[it[0]]=true; });
+  const s=document.createElement("section");
+  s.id=sec.id;
+  if(sec.urgent) s.classList.add("urgent");
+  if(ui[sec.id]===false || (ui[sec.id]===undefined && sec.id==="fait")) s.classList.add("closed");
+  s.innerHTML=`<div class="sh"><span class="em">${sec.em}</span><h2>${esc(sec.title)}</h2><span class="n" data-n></span><span class="chev">▾</span></div><div class="body"></div>`;
+  const body=s.querySelector(".body");
+  if(sec.note){ const n=document.createElement("div"); n.className="note"; n.textContent=sec.note; body.appendChild(n); }
+  sec.items.forEach(it=>{
+    if(!Array.isArray(it)){ const d=document.createElement("div"); d.className="sub"; d.textContent=it.sub; body.appendChild(d); return; }
+    const [id,fr,en,de,hint,,tagType,tagText]=it;
+    const l=document.createElement("label");
+    l.innerHTML=`<input type="checkbox"><span class="t">${esc(fr)} <span class="tr">(${esc(en)} / ${esc(de)})</span>${tagText?`<span class="tag ${tagType}">${esc(tagText)}</span>`:""}${hint?`<small>${esc(hint)}</small>`:""}</span>`;
+    const cb=l.querySelector("input");
+    cb.checked=!!state[id]; l.classList.toggle("checked",cb.checked);
+    cb.addEventListener("change",()=>{ state[id]=cb.checked; l.classList.toggle("checked",cb.checked); save(); update(); });
+    body.appendChild(l);
+  });
+  s.querySelector(".sh").addEventListener("click",()=>{ s.classList.toggle("closed"); ui[sec.id]=!s.classList.contains("closed"); save(); });
+  list.appendChild(s);
+});
+
+function update(){
+  let tot=0,done=0;
+  DATA.forEach(sec=>{
+    let d=0,t=0;
+    sec.items.forEach(it=>{ if(Array.isArray(it)){ t++; if(state[it[0]]) d++; } });
+    tot+=t; done+=d;
+    document.querySelector(`#${sec.id} [data-n]`).textContent=`${d}/${t}`;
+  });
+  document.getElementById("cnt").textContent=done;
+  document.getElementById("tot").textContent=tot;
+  document.getElementById("fill").style.width=(tot?done/tot*100:0)+"%";
+}
+update(); save();
+
+const hideBtn=document.getElementById("hide");
+function applyHide(){ document.body.classList.toggle("hide-done",!!ui.hide); hideBtn.classList.toggle("on",!!ui.hide); hideBtn.textContent=ui.hide?"Afficher tout":"Masquer ce qui est fait"; }
+hideBtn.addEventListener("click",()=>{ ui.hide=!ui.hide; save(); applyHide(); });
+applyHide();
+
+document.getElementById("fold").addEventListener("click",e=>{
+  const secs=[...document.querySelectorAll("section")];
+  const anyOpen=secs.some(s=>!s.classList.contains("closed"));
+  secs.forEach(s=>{ s.classList.toggle("closed",anyOpen); ui[s.id]=!anyOpen; });
+  e.target.textContent=anyOpen?"Tout déplier":"Tout replier"; save();
+});
+
+const box=document.getElementById("syncbox"), code=document.getElementById("code"), msg=document.getElementById("msg");
+document.getElementById("sync").addEventListener("click",()=>{ box.hidden=!box.hidden; msg.textContent=""; });
+document.getElementById("exp").addEventListener("click",async()=>{
+  const ids=Object.keys(state).filter(k=>state[k]);
+  const c="APPART:"+btoa(unescape(encodeURIComponent(JSON.stringify(ids))));
+  code.value=c; code.select();
+  try{ await navigator.clipboard.writeText(c); msg.textContent="Code copié ✓ — colle-le dans tes notes."; }
+  catch(e){ msg.textContent="Sélectionne le code ci-dessus et copie-le."; }
+});
+document.getElementById("imp").addEventListener("click",()=>{
+  try{
+    const raw=code.value.trim().replace(/^APPART:/,"");
+    const ids=JSON.parse(decodeURIComponent(escape(atob(raw))));
+    if(!Array.isArray(ids)) throw 0;
+    Object.keys(state).forEach(k=>state[k]=false);
+    ids.forEach(k=>state[k]=true);
+    save(); location.reload();
+  }catch(e){ msg.textContent="Ce code ne marche pas — vérifie que tu l'as copié en entier."; }
+});
+</script>
+</body>
+</html>
